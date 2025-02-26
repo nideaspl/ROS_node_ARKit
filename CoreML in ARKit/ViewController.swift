@@ -13,7 +13,7 @@ import ARKit
 import Vision
 
 class ViewController: UIViewController, ARSCNViewDelegate {
-
+    
     // SCENE
     @IBOutlet var sceneView: ARSCNView!
     let bubbleDepth : Float = 0.01 // the 'depth' of 3D text
@@ -23,6 +23,46 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     var visionRequests = [VNRequest]()
     let dispatchQueueML = DispatchQueue(label: "com.hw.dispatchqueueml") // A Serial Queue
     @IBOutlet weak var debugTextView: UITextView!
+    // Xinyi Chen added on 26/2/2025
+    var targetHost: String? // Store the target host
+    // Create Input Field & Button Programmatically
+    let hostTextField: UITextField = {
+        let textField = UITextField()
+        textField.placeholder = "Enter Target Host"
+        textField.borderStyle = .roundedRect
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        return textField
+    }()
+    
+    let saveButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Save Host", for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    // Setup Input UI
+    func setupUI() {
+        view.addSubview(hostTextField)
+        view.addSubview(saveButton)
+        
+        NSLayoutConstraint.activate([
+            hostTextField.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            hostTextField.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            hostTextField.widthAnchor.constraint(equalToConstant: 250),
+            
+            saveButton.topAnchor.constraint(equalTo: hostTextField.bottomAnchor, constant: 10),
+            saveButton.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
+        
+        saveButton.addTarget(self, action: #selector(saveHost), for: .touchUpInside)
+    }
+    
+    @objc func saveHost() {
+        targetHost = hostTextField.text
+        print("Target Host Saved: \(targetHost ?? "None")")
+    }
+    // Below are original
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -42,6 +82,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Enable Default Lighting - makes the 3D text a bit poppier.
         sceneView.autoenablesDefaultLighting = true
         
+        setupUI()
         //////////////////////////////////////////////////
         // Tap Gesture Recognizer
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(gestureRecognize:)))
@@ -86,7 +127,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         super.didReceiveMemoryWarning()
         // Release any cached data, images, etc that aren't in use.
     }
-
+    
     // MARK: - ARSCNViewDelegate
     
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
@@ -240,6 +281,51 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         }
         
     }
+    // Xinyi Chen Added on 2/26/2025:
+    /*
+    func sendCoordinatesToFlask(label: String, x: Float, y: Float, z: Float) {
+        let url = URL(string: "http://192.168.73.5:5000/coordinates")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let json: [String: Any] = ["description": label, "x": x, "y": y, "z": z]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: json)
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error sending coordinates: \(error)")
+            }
+        }
+        task.resume()
+    }
+     */
+    func sendCoordinatesToFlask(label: String, x: Float, y: Float, z: Float) {
+        guard let host = targetHost, !host.isEmpty else {
+            print("No target host set!")
+            return
+        }
+        
+        let urlString = "http://\(host):5000/coordinates"
+        guard let url = URL(string: urlString) else {
+            print("Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let json: [String: Any] = ["description": label, "x": x, "y": y, "z": z]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: json)
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error sending coordinates: \(error)")
+            }
+        }
+        task.resume()
+    }
 }
 
 extension UIFont {
@@ -248,23 +334,8 @@ extension UIFont {
         let descriptor = self.fontDescriptor.withSymbolicTraits(UIFontDescriptorSymbolicTraits(traits))
         return UIFont(descriptor: descriptor!, size: 0)
     }
+    
+
 }
 
-// Xinyi Chen Added on 2/26/2025:
-func sendCoordinatesToFlask(label: String, x: Float, y: Float, z: Float) {
-    let url = URL(string: "http://192.168.73.5:5000/coordinates")!
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    let json: [String: Any] = ["description": label, "x": x, "y": y, "z": z]
-    request.httpBody = try? JSONSerialization.data(withJSONObject: json)
-
-    let task = URLSession.shared.dataTask(with: request) { data, response, error in
-        if let error = error {
-            print("Error sending coordinates: \(error)")
-        }
-    }
-    task.resume()
-}
 
