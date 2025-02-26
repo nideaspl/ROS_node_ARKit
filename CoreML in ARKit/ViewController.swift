@@ -119,7 +119,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
             sceneView.scene.rootNode.addChildNode(node)
             node.position = worldCoord//!!!
             // Inside handleTap():
-            sendCoordinatesToFlask(x: worldCoord.x, y: worldCoord.y, z: worldCoord.z)
+            sendCoordinatesToFlask(label: latestPrediction, x: worldCoord.x, y: worldCoord.y, z: worldCoord.z)
         }
     }
     
@@ -251,13 +251,13 @@ extension UIFont {
 }
 
 // Xinyi Chen Added on 2/26/2025:
-func sendCoordinatesToFlask(x: Float, y: Float, z: Float) {
-    let url = URL(string: "http://127.0.0.1:5000/coordinates")!
+func sendCoordinatesToFlask(label: String, x: Float, y: Float, z: Float) {
+    let url = URL(string: "http://192.168.73.5:5000/coordinates")!
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-    let json: [String: Float] = ["x": x, "y": y, "z": z]
+    let json: [String: Any] = ["description": label, "x": x, "y": y, "z": z]
     request.httpBody = try? JSONSerialization.data(withJSONObject: json)
 
     let task = URLSession.shared.dataTask(with: request) { data, response, error in
